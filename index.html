@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic 10x10 Grid</title>
+    <style>
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .cell {
+            height: 100px;
+            width: 100px;
+            border: 1px solid gray;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: block; width: 100%">
+        <input type="file" id="audioInput" accept="audio/*">
+        <audio controls id="audioPlayer"></audio>
+    </div>
+    <div id="grid-container">
+    </div>
+    <script>
+        document.getElementById('audioInput').addEventListener('change', function (event) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            const file = event.target.files[0];
+        
+            if (file) {
+                const objectURL = URL.createObjectURL(file);
+                audioPlayer.src = objectURL;
+                initializeAudioVisualizer(objectURL)
+            } else {
+                audioPlayer.src = '';
+            }
+
+        });
+
+        const initializeAudioVisualizer = () => {
+            const gridContainer = document.getElementById('grid-container');
+            const audio = document.getElementById('audioPlayer');
+            const audioContext = new AudioContext();
+            const source = audioContext.createMediaElementSource(audio);
+            const analyser = audioContext.createAnalyser();
+
+            source.connect(analyser);
+            source.connect(audioContext.destination);
+
+            const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(frequencyData); 
+            console.log('frequencyData', frequencyData)
+
+            for (let i = 0; i < 10; i++) {
+                const cell = document.createElement("div");
+                cell.setAttribute('id', 'cell' + i)
+                cell.setAttribute('class', 'cell')
+                gridContainer.appendChild(cell);
+            }
+
+            const renderFrame = () => {
+                analyser.getByteFrequencyData(frequencyData)
+                for (let i = 0; i < frequencyData.length; i++) {
+                    const fd = frequencyData[(i + 10) * 2]
+
+                    const cell = document.querySelector("#cell" + i)
+                    if (!cell) {
+                        continue;
+                    }
+
+                    cell.style.backgroundColor = 'green';
+                    cell.style.height = Math.max(4, fd || 0) + "px"
+                    cell.style.gridRow = `1 / ${fd / 20}`
+                }
+
+                window.requestAnimationFrame(renderFrame)
+            }
+            
+            renderFrame();
+
+            setInterval(() => {
+                renderFrame()
+            }, 1000)
+
+            audio.volume = 0.25
+        }
+    </script>
+</body>
+</html>
